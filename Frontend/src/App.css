@@ -1,0 +1,57 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+.auth-page { max-width:420px;margin:40px auto;padding:16px;border-radius:8px;background:#fff }
+.auth-form{ display:flex;flex-direction:column;gap:8px }
+.auth-form input{ padding:8px;border:1px solid #ddd;border-radius:4px }
+.auth-form button{ padding:8px 12px }
+.helper{ margin-top:8px;font-size:0.9rem }
+.error{ color:#b00020;margin-top:8px }
+
+.chat-page{ max-width:900px;margin:20px auto;display:flex;flex-direction:column;height:80vh }
+.chat-header{ display:flex;justify-content:space-between;align-items:center;padding:8px 0 }
+.messages{ flex:1;overflow:auto;padding:8px;border:1px solid #eee;border-radius:6px;background:#fafafa }
+.message{ padding:8px;border-bottom:1px solid #eee }
+.message .meta{ font-size:0.8rem;color:#666 }
+.composer{ display:flex;gap:8px;margin-top:8px }
+.composer input{ flex:1;padding:8px }
