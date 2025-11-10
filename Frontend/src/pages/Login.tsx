@@ -3,8 +3,8 @@ import { useNavigate, Link } from 'react-router-dom'
 import { login } from '../services/auth'
 
 export default function Login() {
-  const [email, setEmail] = useState('testuser@example.com')
-  const [password, setPassword] = useState('Password123!')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const navigate = useNavigate()
 
@@ -15,18 +15,27 @@ export default function Login() {
       const data = await login({ email, password })
       if (data.token) {
         localStorage.setItem('token', data.token)
+        // store user data if backend returns it
+        if (data.user) {
+          localStorage.setItem('userName', data.user.name ?? data.user.email ?? '')
+          localStorage.setItem('userId', String(data.user.id ?? ''))
+        } else if (data.email) {
+          localStorage.setItem('userName', data.email)
+        }
         navigate('/chat')
       } else {
-        setError('No token received')
+        setError('No token recibido')
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err.message || 'Login failed')
+      setError(err?.response?.data?.message || err.message || 'Error en login')
     }
   }
 
   return (
-    <div className="auth-page">
-      <h2>Login</h2>
+    <div className="auth-page card">
+      <h2 className="title">Bienvenido</h2>
+      <p className="subtitle">Inicia sesión para entrar al chat</p>
+
       <form onSubmit={handleSubmit} className="auth-form">
         <label>
           Email
@@ -36,10 +45,12 @@ export default function Login() {
           Password
           <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
         </label>
-        <button type="submit">Login</button>
+        <button className="primary" type="submit">Entrar</button>
+
         <div className="helper">
-          <Link to="/register">Create account</Link>
+          ¿No tienes cuenta? <Link to="/register">Regístrate</Link>
         </div>
+
         {error && <p className="error">{error}</p>}
       </form>
     </div>
