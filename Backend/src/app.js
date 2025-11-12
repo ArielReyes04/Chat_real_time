@@ -1,30 +1,31 @@
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
-const logger = require('./utils/logger');
-const authRoutes = require('./routes/auth.routes');
-const messageRoutes = require('./routes/message.routes');
-const bodyParser = require('express').json;
-const dotenv = require('dotenv');
-dotenv.config();
+const db = require('./models');
 
 const app = express();
 
-app.use(helmet());
-app.use(cors());
-app.use(bodyParser({ limit: '5mb' }));
+// Middlewares
+app.use(cors({
+  origin: process.env.CORS_ORIGIN?.split(',') || '*',
+  credentials: true
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Routes
+const authRoutes = require('./routes/auth.routes');
+const messageRoutes = require('./routes/message.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
 
-app.get('/', (req, res) => {
-  res.json({ message: 'Chat real-time backend' });
-});
-
-// Error handler
-app.use((err, req, res, next) => {
-  logger.error(err);
-  res.status(err.status || 500).json({ message: err.message || 'Internal error' });
+// Health check
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    message: 'Server is running',
+    database: db.sequelize ? 'connected' : 'disconnected'
+  });
 });
 
 module.exports = app;

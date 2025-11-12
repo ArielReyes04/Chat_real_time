@@ -1,19 +1,27 @@
-const { Pool } = require('pg');
-const dotenv = require('dotenv');
-dotenv.config();
+const { Sequelize } = require('sequelize');
+require('dotenv').config();
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || process.env.PG_CONNECTION_STRING,
-  ssl: process.env.PG_SSL === 'true' ? { rejectUnauthorized: false } : false,
-  max: 20
-});
+const sequelize = new Sequelize(
+  process.env.DB_NAME || 'chat_real_time',
+  process.env.DB_USER || 'postgres',
+  process.env.DB_PASSWORD || 'admin123',
+  {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT, 10) || 5432,
+    dialect: 'postgres',
+    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    define: {
+      timestamps: true,
+      underscored: true,
+      freezeTableName: false
+    },
+    pool: {
+      max: parseInt(process.env.DB_POOL_MAX, 10) || 5,
+      min: parseInt(process.env.DB_POOL_MIN, 10) || 0,
+      acquire: parseInt(process.env.DB_POOL_ACQUIRE, 10) || 30000,
+      idle: parseInt(process.env.DB_POOL_IDLE, 10) || 10000
+    }
+  }
+);
 
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
-});
-
-module.exports = {
-  query: (text, params) => pool.query(text, params),
-  pool
-};
+module.exports = sequelize;
