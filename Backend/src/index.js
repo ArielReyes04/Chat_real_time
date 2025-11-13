@@ -33,7 +33,7 @@ const initDatabase = async () => {
 
     // 2. Sincronizar modelos
     const isDevelopment = process.env.NODE_ENV !== 'production';
-    const syncOptions = isDevelopment ? { force: true } : { alter: false };
+    const syncOptions = isDevelopment ? { force: false } : { alter: true };
 
     console.log(`🔄 Sincronizando modelos (${syncOptions.force ? 'FORCE' : syncOptions.alter ? 'ALTER' : 'SAFE'})...`);
     

@@ -19,12 +19,13 @@ function App() {
   }, [])
 
   return (
-    <Routes>
-      <Route path="/" element={token ? <Navigate to="/chat" replace /> : <Navigate to="/login" replace />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/chat" element={token ? <Chat /> : <Navigate to="/login" replace />} />
-    </Routes>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/chat" element={<Chat />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
   )
 }
 

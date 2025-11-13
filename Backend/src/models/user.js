@@ -22,10 +22,6 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING(255),
       allowNull: false
     },
-    displayName: {
-      type: DataTypes.STRING(100),
-      field: 'display_name'
-    },
     isOnline: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,

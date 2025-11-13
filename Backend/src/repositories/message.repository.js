@@ -23,12 +23,12 @@ class MessageRepository {
           { 
             model: User, 
             as: 'sender', 
-            attributes: ['id', 'username', 'email', 'displayName', 'isOnline'] 
+            attributes: ['id', 'username', 'email', 'isOnline'] 
           },
           { 
             model: User, 
             as: 'receiver', 
-            attributes: ['id', 'username', 'email', 'displayName', 'isOnline'] 
+            attributes: ['id', 'username', 'email', 'isOnline'] 
           }
         ]
       });
@@ -55,12 +55,12 @@ class MessageRepository {
           { 
             model: User, 
             as: 'sender', 
-            attributes: ['id', 'username', 'displayName', 'isOnline'] 
+            attributes: ['id', 'username', 'isOnline'] 
           },
           { 
             model: User, 
             as: 'receiver', 
-            attributes: ['id', 'username', 'displayName', 'isOnline'] 
+            attributes: ['id', 'username','isOnline'] 
           }
         ],
         order,
@@ -86,7 +86,7 @@ class MessageRepository {
           { 
             model: User, 
             as: 'sender', 
-            attributes: ['id', 'username', 'displayName', 'isOnline'] 
+            attributes: ['id', 'username', 'isOnline'] 
           }
         ],
         order: [['createdAt', 'DESC']]
@@ -179,12 +179,12 @@ class MessageRepository {
           { 
             model: User, 
             as: 'sender', 
-            attributes: ['id', 'username', 'displayName', 'isOnline'] 
+            attributes: ['id', 'username', 'isOnline'] 
           },
           { 
             model: User, 
             as: 'receiver', 
-            attributes: ['id', 'username', 'displayName', 'isOnline'] 
+            attributes: ['id', 'username', 'isOnline'] 
           }
         ],
         order: [['createdAt', 'DESC']]
@@ -256,12 +256,12 @@ class MessageRepository {
           { 
             model: User, 
             as: 'sender', 
-            attributes: ['id', 'username', 'displayName'] 
+            attributes: ['id', 'username'] 
           },
           { 
             model: User, 
             as: 'receiver', 
-            attributes: ['id', 'username', 'displayName'] 
+            attributes: ['id', 'username'] 
           }
         ],
         order: [['createdAt', 'DESC']],
@@ -307,12 +307,12 @@ class MessageRepository {
           { 
             model: User, 
             as: 'sender', 
-            attributes: ['id', 'username', 'displayName'] 
+            attributes: ['id', 'username'] 
           },
           { 
             model: User, 
             as: 'receiver', 
-            attributes: ['id', 'username', 'displayName'] 
+            attributes: ['id', 'username'] 
           }
         ],
         order,

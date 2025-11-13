@@ -1,18 +1,41 @@
 import axios from 'axios'
 
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 const api = axios.create({
   baseURL
 })
 
-// attach token automatically
+// Interceptor para adjuntar el token automáticamente
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
+  console.log('🔑 Token en request:', token ? 'Presente' : 'Ausente')
+  
   if (token && config.headers) {
     config.headers['Authorization'] = `Bearer ${token}`
+    console.log('✅ Authorization header agregado')
   }
   return config
+}, (error) => {
+  console.error('❌ Error en request interceptor:', error)
+  return Promise.reject(error)
 })
+
+// Interceptor para manejar respuestas
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('❌ Error en response:', error.response?.status, error.response?.data)
+    
+    if (error.response?.status === 401) {
+      console.log('❌ Token inválido o expirado')
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      // window.location.href = '/login'
+    }
+    
+    return Promise.reject(error)
+  }
+)
 
 export default api
