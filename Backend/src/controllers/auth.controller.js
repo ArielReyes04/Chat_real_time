@@ -2,26 +2,34 @@ const authService = require('../services/auth.service');
 const { validationResult } = require('express-validator');
 
 class AuthController {
+  /**
+   * Registro de administrador
+   */
   async register(req, res) {
     try {
-      console.log('📝 Intento de registro:', { 
+      console.log('📝 Intento de registro de administrador:', { 
         username: req.body.username, 
         email: req.body.email 
       });
 
-      // Validar datos de entrada
+      // Validar datos de entrada con express-validator
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         console.log('❌ Errores de validación:', errors.array());
         return res.status(400).json({ 
           success: false,
-          errors: errors.array() 
+          message: 'Datos de entrada inválidos',
+          errors: errors.array().map(err => ({
+            field: err.path,
+            message: err.msg,
+            value: err.value
+          }))
         });
       }
 
-      const { username, email, password} = req.body;
+      const { username, email, password } = req.body;
 
-      // Validaciones básicas
+      // Validaciones básicas adicionales
       if (!username || !email || !password) {
         return res.status(400).json({
           success: false,
@@ -29,28 +37,43 @@ class AuthController {
         });
       }
 
-      // Registrar usuario
+      // Registrar administrador
       const result = await authService.register({
-        username,
-        email,
+        username: username.trim(),
+        email: email.trim().toLowerCase(),
         password
       });
 
-      console.log('✅ Usuario registrado exitosamente:', result.user.username);
+      console.log('✅ Administrador registrado exitosamente:', result.admin.username);
 
       res.status(201).json({
         success: true,
-        message: 'Usuario registrado exitosamente',
+        message: 'Administrador registrado exitosamente',
         data: {
-          user: result.user,
+          admin: result.admin,
           token: result.token
         }
       });
     } catch (error) {
-      console.error('❌ Error en registro:', error);
+      console.error('❌ Error en registro de administrador:', error.message);
 
-      // Errores específicos
-      if (error.message.includes('ya existe') || error.message.includes('unique')) {
+      // Manejo de errores específicos
+      if (error.status === 409) {
+        return res.status(409).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      if (error.status === 400) {
+        return res.status(400).json({
+          success: false,
+          message: error.message
+        });
+      }
+
+      // Error de BD - duplicado
+      if (error.message.includes('unique') || error.message.includes('duplicate')) {
         return res.status(409).json({
           success: false,
           message: 'El username o email ya está registrado'
@@ -59,18 +82,22 @@ class AuthController {
 
       res.status(500).json({
         success: false,
-        message: 'Error al registrar usuario',
+        message: 'Error interno del servidor al registrar administrador',
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
   }
 
+  /**
+   * Login de administrador
+   */
   async login(req, res) {
     try {
-      console.log('🔐 Intento de login:', { email: req.body.email });
+      console.log('🔐 Intento de login de administrador:', { email: req.body.email });
 
       const { email, password } = req.body;
 
+      // Validaciones básicas
       if (!email || !password) {
         return res.status(400).json({
           success: false,
@@ -78,48 +105,97 @@ class AuthController {
         });
       }
 
-      const result = await authService.login(email, password);
+      // Validar formato de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Formato de email inválido'
+        });
+      }
 
-      console.log('✅ Login exitoso:', result.user.username);
+      const result = await authService.login(email.trim().toLowerCase(), password);
+
+      console.log('✅ Login exitoso de administrador:', result.admin.username);
 
       res.json({
         success: true,
         message: 'Login exitoso',
         data: {
-          user: result.user,
+          admin: result.admin,
           token: result.token
         }
       });
     } catch (error) {
-      console.error('❌ Error en login:', error);
+      console.error('❌ Error en login de administrador:', error.message);
 
-      if (error.message === 'Usuario no encontrado' || error.message === 'Contraseña incorrecta') {
+      // Manejo de errores específicos
+      if (error.status === 404) {
         return res.status(401).json({
           success: false,
           message: 'Credenciales incorrectas'
         });
       }
 
+      if (error.status === 401) {
+        return res.status(401).json({
+          success: false,
+          message: 'Credenciales incorrectas'
+        });
+      }
+
+      if (error.status === 403) {
+        return res.status(403).json({
+          success: false,
+          message: 'Cuenta de administrador desactivada'
+        });
+      }
+
       res.status(500).json({
         success: false,
-        message: 'Error al iniciar sesión',
+        message: 'Error interno del servidor al iniciar sesión',
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
   }
 
+  /**
+   * Obtener perfil del administrador
+   */
   async getProfile(req, res) {
     try {
-      const userId = req.userId; // Viene del middleware de autenticación
+      const adminId = req.admin?.id || req.adminId; // Viene del middleware de autenticación
 
-      const user = await authService.getUserById(userId);
+      if (!adminId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Token de administrador requerido'
+        });
+      }
+
+      const admin = await authService.getAdminById(adminId);
 
       res.json({
         success: true,
-        data: { user }
+        message: 'Perfil obtenido exitosamente',
+        data: { admin }
       });
     } catch (error) {
-      console.error('❌ Error al obtener perfil:', error);
+      console.error('❌ Error al obtener perfil de administrador:', error.message);
+
+      if (error.status === 404) {
+        return res.status(404).json({
+          success: false,
+          message: 'Administrador no encontrado'
+        });
+      }
+
+      // if (error.status === 403) {
+      //   return res.status(403).json({
+      //     success: false,
+      //     message: 'Cuenta de administrador desactivada'
+      //   });
+      // }
 
       res.status(500).json({
         success: false,
@@ -129,22 +205,154 @@ class AuthController {
     }
   }
 
+  /**
+   * Cambiar contraseña del administrador
+   */
+  async changePassword(req, res) {
+    try {
+      const adminId = req.admin?.id || req.adminId;
+      const { currentPassword, newPassword, confirmPassword } = req.body;
+
+      // Validaciones
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Contraseña actual, nueva contraseña y confirmación son requeridas'
+        });
+      }
+
+      if (newPassword !== confirmPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'La nueva contraseña y su confirmación no coinciden'
+        });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'La nueva contraseña debe tener al menos 6 caracteres'
+        });
+      }
+
+      await authService.changePassword(adminId, currentPassword, newPassword);
+
+      console.log('✅ Contraseña cambiada para administrador:', adminId);
+
+      res.json({
+        success: true,
+        message: 'Contraseña cambiada exitosamente'
+      });
+    } catch (error) {
+      console.error('❌ Error al cambiar contraseña:', error.message);
+
+      if (error.status === 401) {
+        return res.status(401).json({
+          success: false,
+          message: 'Contraseña actual incorrecta'
+        });
+      }
+
+      if (error.status === 404) {
+        return res.status(404).json({
+          success: false,
+          message: 'Administrador no encontrado'
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        message: 'Error al cambiar contraseña',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
+  /**
+   * Logout de administrador
+   */
   async logout(req, res) {
     try {
-      const userId = req.userId;
+      const adminId = req.admin?.id || req.adminId;
       
-      await authService.logout(userId);
+      if (adminId) {
+        await authService.logout(adminId);
+        console.log('✅ Logout exitoso de administrador:', adminId);
+      }
 
       res.json({
         success: true,
         message: 'Logout exitoso'
       });
     } catch (error) {
-      console.error('❌ Error en logout:', error);
+      console.error('❌ Error en logout de administrador:', error.message);
 
       res.status(500).json({
         success: false,
-        message: 'Error al cerrar sesión'
+        message: 'Error al cerrar sesión',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
+  /**
+   * Refrescar token
+   */
+  async refreshToken(req, res) {
+    try {
+      const { token } = req.body;
+
+      if (!token) {
+        return res.status(400).json({
+          success: false,
+          message: 'Token requerido'
+        });
+      }
+
+      const newToken = await authService.refreshToken(token);
+
+      res.json({
+        success: true,
+        message: 'Token refrescado exitosamente',
+        data: { token: newToken }
+      });
+    } catch (error) {
+      console.error('❌ Error al refrescar token:', error.message);
+
+      res.status(401).json({
+        success: false,
+        message: 'Token inválido o expirado'
+      });
+    }
+  }
+
+  /**
+   * Verificar token (endpoint para validar si el token es válido)
+   */
+  async verifyToken(req, res) {
+    try {
+      const adminId = req.admin?.id || req.adminId;
+      
+      if (!adminId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Token inválido'
+        });
+      }
+
+      const admin = await authService.getAdminById(adminId);
+
+      res.json({
+        success: true,
+        message: 'Token válido',
+        data: { admin }
+      });
+    } catch (error) {
+      console.error('❌ Error al verificar token:', error.message);
+
+      res.status(401).json({
+        success: false,
+        message: 'Token inválido o expirado'
       });
     }
   }

@@ -62,21 +62,135 @@ const initDatabase = async () => {
   }
 };
 
-// Socket.IO event handlers
+// Socket.IO para chat de salas
+const connectedUsers = new Map(); // sessionId -> { socket, userId, roomId }
+
 io.on('connection', (socket) => {
-  console.log('🔌 Usuario conectado:', socket.id);
+  console.log('🔌 Cliente conectado:', socket.id);
 
-  socket.on('join', (userId) => {
-    socket.join(`user_${userId}`);
-    console.log(`👤 Usuario ${userId} se unió a su sala`);
+  // Usuario se une a una sala
+  socket.on('join_room', ({ sessionId, userId, roomId, nickname }) => {
+    try {
+      // Salir de sala anterior si existe
+      const existingUser = connectedUsers.get(sessionId);
+      if (existingUser && existingUser.roomId) {
+        socket.leave(`room_${existingUser.roomId}`);
+        socket.to(`room_${existingUser.roomId}`).emit('user_left', {
+          userId: existingUser.userId,
+          message: `${existingUser.nickname || 'Usuario'} salió de la sala`
+        });
+      }
+
+      // Unirse a nueva sala
+      socket.join(`room_${roomId}`);
+      connectedUsers.set(sessionId, { 
+        socket, 
+        userId, 
+        roomId, 
+        nickname,
+        socketId: socket.id 
+      });
+
+      console.log(`👤 Usuario ${nickname} (${userId}) se unió a sala ${roomId}`);
+
+      // Notificar a otros usuarios de la sala
+      socket.to(`room_${roomId}`).emit('user_joined', {
+        userId,
+        nickname,
+        message: `${nickname} se unió a la sala`
+      });
+
+      // Confirmar al usuario que se unió
+      socket.emit('joined_room', {
+        roomId,
+        message: `Te uniste a la sala exitosamente`
+      });
+    } catch (error) {
+      console.error('❌ Error al unirse a sala:', error.message);
+      socket.emit('error', { message: 'Error al unirse a la sala' });
+    }
   });
 
-  socket.on('send_message', (data) => {
-    io.to(`user_${data.receiverId}`).emit('receive_message', data);
+  // Enviar mensaje a sala
+  socket.on('send_message', (messageData) => {
+    try {
+      const { sessionId, roomId, content, type = 'text' } = messageData;
+      const user = connectedUsers.get(sessionId);
+
+      if (!user || user.roomId !== roomId) {
+        socket.emit('error', { message: 'No estás en esta sala' });
+        return;
+      }
+
+      // Broadcast mensaje a todos en la sala
+      io.to(`room_${roomId}`).emit('new_message', {
+        id: Date.now(), // Temporal, el real viene de la BD
+        senderId: user.userId,
+        senderNickname: user.nickname,
+        content,
+        type,
+        roomId,
+        createdAt: new Date().toISOString()
+      });
+
+      console.log(`💬 Mensaje de ${user.nickname} en sala ${roomId}: ${content?.substring(0, 50)}...`);
+    } catch (error) {
+      console.error('❌ Error al enviar mensaje:', error.message);
+      socket.emit('error', { message: 'Error al enviar mensaje' });
+    }
   });
 
+  // Usuario está escribiendo
+  socket.on('typing', ({ sessionId, roomId, isTyping }) => {
+    try {
+      const user = connectedUsers.get(sessionId);
+      if (user && user.roomId === roomId) {
+        socket.to(`room_${roomId}`).emit('user_typing', {
+          userId: user.userId,
+          nickname: user.nickname,
+          isTyping
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error en typing:', error.message);
+    }
+  });
+
+  // Desconexión
   socket.on('disconnect', () => {
-    console.log('🔌 Usuario desconectado:', socket.id);
+    try {
+      // Encontrar usuario por socketId
+      let disconnectedUser = null;
+      let sessionIdToRemove = null;
+
+      for (const [sessionId, userData] of connectedUsers.entries()) {
+        if (userData.socketId === socket.id) {
+          disconnectedUser = userData;
+          sessionIdToRemove = sessionId;
+          break;
+        }
+      }
+
+      if (disconnectedUser) {
+        // Notificar a la sala que el usuario se desconectó
+        if (disconnectedUser.roomId) {
+          socket.to(`room_${disconnectedUser.roomId}`).emit('user_left', {
+            userId: disconnectedUser.userId,
+            nickname: disconnectedUser.nickname,
+            message: `${disconnectedUser.nickname} se desconectó`
+          });
+        }
+
+        // Remover de usuarios conectados
+        connectedUsers.delete(sessionIdToRemove);
+        
+        console.log(`🔌 Usuario ${disconnectedUser.nickname} (${disconnectedUser.userId}) desconectado`);
+      } else {
+        console.log('🔌 Cliente desconectado:', socket.id);
+      }
+    } catch (error) {
+      console.error('❌ Error al desconectar:', error.message);
+    }
   });
 });
 
@@ -90,7 +204,8 @@ const startServer = async () => {
     server.listen(PORT, () => {
       console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);
       console.log(`📡 Socket.IO listo en http://localhost:${PORT}`);
-      console.log(`🏥 Health check: http://localhost:${PORT}/api/health\n`);
+      console.log(`🏥 Health check: http://localhost:${PORT}/api/health`);
+      console.log(`👥 Usuarios conectados: ${connectedUsers.size}\n`);
     });
   } catch (error) {
     console.error('❌ Error fatal al iniciar servidor:', error.message);

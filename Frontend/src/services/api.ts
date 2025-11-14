@@ -11,9 +11,12 @@ api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token')
   console.log('🔑 Token en request:', token ? 'Presente' : 'Ausente')
   
-  if (token && config.headers) {
+  config.headers = config.headers || {}
+  if (token) {
     config.headers['Authorization'] = `Bearer ${token}`
-    console.log('✅ Authorization header agregado')
+    console.log('✅ Authorization header agregado:', config.headers['Authorization'].slice(0, 30) + '...')
+  } else {
+    console.log('⚠️ No se agregó Authorization header porque no hay token')
   }
   return config
 }, (error) => {
@@ -29,8 +32,8 @@ api.interceptors.response.use(
     
     if (error.response?.status === 401) {
       console.log('❌ Token inválido o expirado')
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
+      // localStorage.removeItem('token')
+      // localStorage.removeItem('user')
       // window.location.href = '/login'
     }
     

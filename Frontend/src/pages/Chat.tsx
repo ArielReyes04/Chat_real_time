@@ -19,7 +19,7 @@ export default function Chat() {
   useEffect(() => {
     if (!currentUser) {
       console.log('❌ No hay usuario autenticado, redirigiendo a login')
-      //navigate('/login')
+      navigate('/login')
     }
   }, [currentUser, navigate])
 
