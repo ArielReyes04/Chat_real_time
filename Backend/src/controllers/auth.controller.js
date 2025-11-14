@@ -190,12 +190,12 @@ class AuthController {
         });
       }
 
-      // if (error.status === 403) {
-      //   return res.status(403).json({
-      //     success: false,
-      //     message: 'Cuenta de administrador desactivada'
-      //   });
-      // }
+      if (error.status === 403) {
+        return res.status(403).json({
+          success: false,
+          message: 'Cuenta de administrador desactivada'
+        });
+      }
 
       res.status(500).json({
         success: false,
@@ -356,6 +356,88 @@ class AuthController {
       });
     }
   }
+
+async activateAdmin(req, res) {
+  try {
+    const { adminId } = req.params;
+    
+    if (!adminId || isNaN(parseInt(adminId))) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de administrador inválido'
+      });
+    }
+
+    await authService.activateAdmin(parseInt(adminId));
+
+    res.json({
+      success: true,
+      message: 'Administrador activado exitosamente'
+    });
+  } catch (error) {
+    console.error('❌ Error al activar administrador:', error.message);
+
+    const statusCode = error.status || 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Error al activar administrador'
+    });
+  }
+}
+
+/**
+ * Desactivar administrador (solo para super admin)
+ */
+async deactivateAdmin(req, res) {
+  try {
+    const { adminId } = req.params;
+    
+    if (!adminId || isNaN(parseInt(adminId))) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID de administrador inválido'
+      });
+    }
+
+    await authService.deactivateAdmin(parseInt(adminId));
+
+    res.json({
+      success: true,
+      message: 'Administrador desactivado exitosamente'
+    });
+  } catch (error) {
+    console.error('❌ Error al desactivar administrador:', error.message);
+
+    const statusCode = error.status || 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Error al desactivar administrador'
+    });
+  }
+}
+
+/**
+ * Listar administradores activos
+ */
+async getActiveAdmins(req, res) {
+  try {
+    const admins = await authService.getActiveAdmins();
+
+    res.json({
+      success: true,
+      data: admins,
+      count: admins.length
+    });
+  } catch (error) {
+    console.error('❌ Error al obtener administradores activos:', error.message);
+
+    res.status(500).json({
+      success: false,
+      message: 'Error al obtener administradores'
+    });
+  }
+}
+
 }
 
 module.exports = new AuthController();

@@ -22,10 +22,16 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING(255),
       allowNull: false
     },
-    isOnline: {
+    isActive: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false,
-      field: 'is_online'
+      allowNull: false,
+      defaultValue: true, // Por defecto, los admins están activos
+      comment: 'Indica si la cuenta del administrador está activa'
+    },
+    lastLogin: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Fecha y hora del último login'
     }
   }, {
     tableName: 'admins',

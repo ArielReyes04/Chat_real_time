@@ -154,11 +154,11 @@ class AuthService {
         throw err;
       }
 
-      // if (!admin.isActive) {
-      //   const err = new Error('Cuenta de administrador desactivada');
-      //   err.status = 403;
-      //   throw err;
-      // }
+      if (!admin.isActive) {
+        const err = new Error('Cuenta de administrador desactivada');
+        err.status = 403;
+        throw err;
+      }
 
       return {
         id: admin.id,
@@ -284,6 +284,52 @@ class AuthService {
       throw error;
     }
   }
+
+  async activateAdmin(adminId) {
+  try {
+    await adminRepository.activate(adminId);
+    console.log('✅ Cuenta de administrador activada:', adminId);
+    return true;
+  } catch (error) {
+    console.error('❌ Error en AuthService.activateAdmin:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Desactivar cuenta de administrador (solo para super admin)
+ */
+async deactivateAdmin(adminId) {
+  try {
+    // Verificar que no sea el último admin activo
+    const activeCount = await adminRepository.countActive();
+    if (activeCount <= 1) {
+      const err = new Error('No se puede desactivar el último administrador activo');
+      err.status = 400;
+      throw err;
+    }
+
+    await adminRepository.deactivate(adminId);
+    console.log('✅ Cuenta de administrador desactivada:', adminId);
+    return true;
+  } catch (error) {
+    console.error('❌ Error en AuthService.deactivateAdmin:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Obtener todos los administradores activos
+ */
+async getActiveAdmins() {
+  try {
+    return await adminRepository.findAllActive();
+  } catch (error) {
+    console.error('❌ Error en AuthService.getActiveAdmins:', error.message);
+    throw error;
+  }
+}
+
 }
 
 module.exports = new AuthService();

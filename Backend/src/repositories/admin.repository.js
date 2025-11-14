@@ -90,6 +90,78 @@ class AdminRepository {
       throw error;
     }
   }
+
+  async activate(id) {
+    try {
+      const [updatedRows] = await Admin.update(
+        { isActive: true },
+        { where: { id } }
+      );
+      
+      if (updatedRows === 0) {
+        throw new Error('Administrador no encontrado');
+      }
+      
+      console.log('✅ Administrador activado:', id);
+      return true;
+    } catch (error) {
+      console.error('❌ Error en AdminRepository.activate:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Desactivar cuenta de administrador
+   */
+  async deactivate(id) {
+    try {
+      const [updatedRows] = await Admin.update(
+        { isActive: false },
+        { where: { id } }
+      );
+      
+      if (updatedRows === 0) {
+        throw new Error('Administrador no encontrado');
+      }
+      
+      console.log('✅ Administrador desactivado:', id);
+      return true;
+    } catch (error) {
+      console.error('❌ Error en AdminRepository.deactivate:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener solo administradores activos
+   */
+  async findAllActive() {
+    try {
+      return await Admin.findAll({
+        where: { isActive: true },
+        attributes: ['id', 'username', 'email', 'isActive', 'lastLogin', 'createdAt'],
+        order: [['createdAt', 'DESC']]
+      });
+    } catch (error) {
+      console.error('❌ Error en AdminRepository.findAllActive:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Contar administradores activos
+   */
+  async countActive() {
+    try {
+      return await Admin.count({
+        where: { isActive: true }
+      });
+    } catch (error) {
+      console.error('❌ Error en AdminRepository.countActive:', error.message);
+      throw error;
+    }
+  }
+
 }
 
 module.exports = new AdminRepository();
