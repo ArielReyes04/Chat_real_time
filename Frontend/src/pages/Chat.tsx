@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { fetchMessages, postMessage } from '../services/message'
 import type { Message } from '../services/message'
 import { useNavigate } from 'react-router-dom'
+import { io as ioClient, Socket } from 'socket.io-client'
 
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([])
@@ -33,9 +34,18 @@ export default function Chat() {
 
   useEffect(() => {
     load()
+
+    // conectar socket
+    const socket: Socket = ioClient(import.meta.env.VITE_API_URL || 'http://localhost:3000')
+    socket.on('message', (m: Message) => {
+      setMessages((s) => [...s, m])
+      setTimeout(() => listRef.current?.scrollTo({ top: 999999, behavior: 'smooth' }), 50)
+    })
+
     pollRef.current = window.setInterval(load, 3000)
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
+      socket.disconnect()
     }
   }, [])
 
