@@ -2,23 +2,34 @@ import { useEffect, useState, useRef } from 'react'
 import { fetchMessages, postMessage } from '../services/message'
 import type { Message } from '../services/message'
 import { useNavigate } from 'react-router-dom'
-import { io as ioClient, Socket } from 'socket.io-client'
+import { getCurrentUser, logout as authLogout } from '../services/auth'
 
 export default function Chat() {
   const [messages, setMessages] = useState<Message[]>([])
-  const [content, setContent] = useState('Hola a todos!')
+  const [content, setContent] = useState('')
   const [error, setError] = useState('')
   const navigate = useNavigate()
   const pollRef = useRef<number | null>(null)
   const listRef = useRef<HTMLDivElement | null>(null)
 
-  const userName = localStorage.getItem('userName') || 'Tú'
-  const userId = Number(localStorage.getItem('userId') || '0')
+  // ✅ OBTENER USUARIO CORRECTAMENTE
+  const currentUser = getCurrentUser()
+  
+  // ✅ Redirigir si no hay usuario autenticado
+  useEffect(() => {
+    if (!currentUser) {
+      console.log('❌ No hay usuario autenticado, redirigiendo a login')
+      navigate('/login')
+    }
+  }, [currentUser, navigate])
+
+  if (!currentUser) return null
+
+  const userName =  currentUser.username
+  const userId = currentUser.id
 
   function logout() {
-    localStorage.removeItem('token')
-    localStorage.removeItem('userName')
-    localStorage.removeItem('userId')
+    authLogout()
     navigate('/login')
   }
 
@@ -28,11 +39,21 @@ export default function Chat() {
       setMessages(data)
       setTimeout(() => listRef.current?.scrollTo({ top: 999999, behavior: 'smooth' }), 50)
     } catch (err: any) {
+      console.error('❌ Error al cargar mensajes:', err)
+      if (err.response?.status === 401) {
+        console.log('❌ Token inválido, redirigiendo a login')
+        //logout()
+        return
+      }
       setError(err?.response?.data?.message || err.message || 'No se pudieron cargar mensajes')
     }
   }
 
   useEffect(() => {
+    console.log('🔄 Iniciando carga de mensajes...')
+    console.log('👤 Usuario actual:', currentUser)
+    console.log('🔑 Token:', localStorage.getItem('token'))
+    
     load()
 
     // conectar socket
@@ -58,6 +79,11 @@ export default function Chat() {
       setMessages((s) => [...s, m])
       setTimeout(() => listRef.current?.scrollTo({ top: 999999, behavior: 'smooth' }), 50)
     } catch (err: any) {
+      console.error('❌ Error al enviar mensaje:', err)
+      if (err.response?.status === 401) {
+        logout()
+        return
+      }
       setError(err?.response?.data?.message || err.message || 'Error al enviar')
     }
   }
@@ -93,7 +119,7 @@ export default function Chat() {
             <div key={m.id} className={`message ${mine ? 'mine' : ''}`}>
               <div className="bubble">
                 <div className="meta">
-                  <strong>{mine ? 'Tú' : `User ${m.senderId}`}</strong>
+                  <strong>{`User ${m.senderId}`}</strong>
                   <small>{formatTime(m.createdAt)}</small>
                 </div>
                 <div className="content">{m.content}</div>

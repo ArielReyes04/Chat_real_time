@@ -6,28 +6,31 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    setLoading(true)
+
     try {
-      const data = await login({ email, password })
-      if (data.token) {
-        localStorage.setItem('token', data.token)
-        // store user data if backend returns it
-        if (data.user) {
-          localStorage.setItem('userName', data.user.name ?? data.user.email ?? '')
-          localStorage.setItem('userId', String(data.user.id ?? ''))
-        } else if (data.email) {
-          localStorage.setItem('userName', data.email)
-        }
+      // ✅ CORRECTO: Pasar parámetros individuales, no objeto
+      const response = await login(email, password)
+      
+      if (response.success && response.data) {
+        console.log('✅ Login exitoso:', response.data.user)
+        // El token ya se guarda en auth.ts
         navigate('/chat')
+        console.log('✅ Navigate ejecutado')
       } else {
-        setError('No token recibido')
+        setError(response.message || 'Error al iniciar sesión')
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err.message || 'Error en login')
+      console.error('❌ Error en login:', err)
+      setError(err.message || 'Error al iniciar sesión')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -39,13 +42,29 @@ export default function Login() {
       <form onSubmit={handleSubmit} className="auth-form">
         <label>
           Email
-          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
+          <input 
+            value={email} 
+            onChange={(e) => setEmail(e.target.value)} 
+            type="email" 
+            required 
+            placeholder="correo@ejemplo.com"
+            autoComplete="email"
+          />
         </label>
         <label>
           Password
-          <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
+          <input 
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)} 
+            type="password" 
+            required 
+            placeholder="Tu contraseña"
+            autoComplete="current-password"
+          />
         </label>
-        <button className="primary" type="submit">Entrar</button>
+        <button className="primary" type="submit" disabled={loading}>
+          {loading ? 'Iniciando sesión...' : 'Entrar'}
+        </button>
 
         <div className="helper">
           ¿No tienes cuenta? <Link to="/register">Regístrate</Link>
