@@ -36,7 +36,7 @@ class MessageController {
         }
       });
     } catch (error) {
-      console.error('❌ Error al obtener mensajes:', error.message);
+      console.error('Error al obtener mensajes:', error.message);
 
       if (error.status === 403) {
         return res.status(403).json({
@@ -101,7 +101,7 @@ class MessageController {
       mimeType: req.file.mimetype
     } : null;
 
-    // ✅ MEJORAR: Determinar tipo automáticamente si hay archivo
+    // Determinar tipo automáticamente si hay archivo
     const messageType = req.file ? 'file' : 'text';
 
     const message = await messageService.sendMessage({
@@ -120,7 +120,7 @@ class MessageController {
   } catch (error) {
     console.error('❌ Error al enviar mensaje:', error.message);
 
-    // ✅ MEJORAR: Manejo de errores más específico
+    //Manejo de errores más específico
     const statusCode = error.status || 500;
     
     let message = 'Error al enviar mensaje';

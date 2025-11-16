@@ -110,6 +110,23 @@ class RoomService {
         err.status = 404;
         throw err;
       }
+       console.log('✅ Sala encontrada:', { 
+      roomId: room.id, 
+      roomName: room.name,
+      createdBy: room.createdBy,
+      requestedBy: adminId
+    });
+
+    // ✅ MEJORAR: Validación de permisos más específica
+    if (adminId && room.createdBy !== adminId) {
+      console.log('❌ Admin sin permisos:', { 
+        adminId, 
+        roomCreatedBy: room.createdBy 
+      });
+      const err = new Error(`No tienes permisos para acceder a esta sala. Creada por admin: ${room.createdBy}`);
+      err.status = 403;
+      throw err;
+    }
 
       // Si se proporciona adminId, verificar que sea el creador
       if (adminId && room.createdBy !== adminId) {
@@ -131,6 +148,11 @@ class RoomService {
         throw err;
       }
 
+      //  Obtener solo participantes ONLINE
+     const onlineParticipants = await userRepository.findByRoom(roomId, { 
+      onlineOnly: true
+    });
+
       return {
         id: room.id,
         name: room.name,
@@ -148,12 +170,12 @@ class RoomService {
           username: room.creator.username,
           email: room.creator.email
         } : null,
-        participants: room.participants?.map(user => ({
-          id: user.id,
-          nickname: user.nickname,
-          isOnline: user.isOnline,
-          joinedAt: user.joinedAt
-        })) || [],
+        participants: onlineParticipants.map(user => ({ 
+        id: user.id,
+        nickname: user.nickname,
+        isOnline: user.isOnline,
+        joinedAt: user.joinedAt
+      })),
         stats: await roomRepository.getRoomStats(roomId)
       };
     } catch (error) {

@@ -117,27 +117,49 @@ class UserService {
    * Salir de una sala
    */
   async leaveRoom(userId) {
-    try {
-      const user = await userRepo.findById(userId);
-      if (!user) {
-        const err = new Error('Usuario no encontrado');
-        err.status = 404;
-        throw err;
-      }
-
-      const roomId = user.currentRoomId;
-      
-      // Actualizar usuario
-      await userRepo.leaveRoom(userId);
-
-      console.log('✅ Usuario salió de sala:', { userId, roomId });
-      
-      return { success: true, roomId };
-    } catch (error) {
-      console.error('❌ Error en UserService.leaveRoom:', error.message);
-      throw error;
+  try {
+    const user = await userRepo.findById(userId);
+    
+    if (!user) {
+      const err = new Error('Usuario no encontrado');
+      err.status = 404;
+      throw err;
     }
+
+    if (!user.currentRoomId) {
+      const err = new Error('Usuario no está en ninguna sala');
+      err.status = 400;
+      throw err;
+    }
+
+    const roomId = user.currentRoomId;
+
+    // ✅ IMPORTANTE: Actualizar usuario correctamente
+    const updatedUser = await userRepo.update(userId, {
+      currentRoomId: null,     // ✅ Salir de la sala
+      isOnline: false,         // ✅ Marcar como offline
+      lastActivity: new Date(),
+      leftAt: new Date()       // ✅ Registrar cuando salió
+    });
+
+    console.log('✅ Usuario salió de sala:', { 
+      userId, 
+      roomId, 
+      nickname: user.nickname,
+      leftAt: new Date()
+    });
+
+    return {
+      userId,
+      roomId,
+      leftAt: new Date(),
+      message: 'Usuario desconectado exitosamente'
+    };
+  } catch (error) {
+    console.error('❌ Error en UserService.leaveRoom:', error.message);
+    throw error;
   }
+}
 
   /**
    * Obtener información de usuario por sessionId
@@ -231,10 +253,82 @@ class UserService {
       const user = await userRepo.findById(userId);
       return user && user.currentRoomId === roomId && user.isOnline;
     } catch (error) {
-      console.error('❌ Error en UserService.hasRoomAccess:', error.message);
+      console.error('Error en UserService.hasRoomAccess:', error.message);
       return false;
     }
   }
+
+  async getUserStats(userId) {
+  try {
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      const err = new Error('Usuario no encontrado');
+      err.status = 404;
+      throw err;
+    }
+
+    // const messageCount = await messageRepository.countByUser(userId);
+
+    return {
+      id: user.id,
+      nickname: user.nickname,
+      joinedAt: user.joinedAt,
+      lastActivity: user.lastActivity,
+      isOnline: user.isOnline,
+      currentRoom: user.currentRoomId ? {
+        id: user.currentRoomId,
+        name: user.Room?.name || 'Sala desconocida'
+      } : null,
+      // messagesSent: messageCount || 0,
+      sessionDuration: user.joinedAt ? Date.now() - new Date(user.joinedAt).getTime() : 0
+    };
+  } catch (error) {
+    console.error('❌ Error en UserService.getUserStats:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Cambiar nickname del usuario
+ */
+async changeNickname(userId, newNickname) {
+  try {
+    const user = await userRepository.findById(userId);
+    if (!user) {
+      const err = new Error('Usuario no encontrado');
+      err.status = 404;
+      throw err;
+    }
+
+    // Verificar que el nickname no esté en uso en la misma sala
+    if (user.currentRoomId) {
+      const existingUser = await userRepository.findByNicknameAndRoom(newNickname, user.currentRoomId);
+      if (existingUser && existingUser.id !== userId) {
+        const err = new Error('Nickname ya está en uso en esta sala');
+        err.status = 409;
+        throw err;
+      }
+    }
+
+    const updatedUser = await userRepository.update(userId, { 
+      nickname: newNickname,
+      lastActivity: new Date()
+    });
+
+    console.log('Nickname actualizado:', { userId, oldNickname: user.nickname, newNickname });
+
+    return {
+      id: updatedUser.id,
+      nickname: updatedUser.nickname,
+      isOnline: updatedUser.isOnline,
+      currentRoomId: updatedUser.currentRoomId,
+      lastActivity: updatedUser.lastActivity
+    };
+  } catch (error) {
+    console.error('❌ Error en UserService.changeNickname:', error.message);
+    throw error;
+  }
+}
 }
 
 module.exports = new UserService();

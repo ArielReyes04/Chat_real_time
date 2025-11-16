@@ -1,4 +1,5 @@
 const userService = require('../services/user.service');
+const roomService = require('../services/room.service'); 
 const { validationResult } = require('express-validator');
 
 class UserController {
@@ -33,6 +34,13 @@ class UserController {
         });
       }
 
+      if (!/^\d{6}$/.test(pin.toString().trim())) {
+        return res.status(400).json({
+          success: false,
+          message: 'PIN debe ser un número de 6 dígitos'
+        });
+      }
+
       const result = await userService.joinRoom({
         pin: pin.toString().trim(),
         nickname: nickname.trim(),
@@ -40,7 +48,7 @@ class UserController {
         userAgent
       });
 
-      console.log('✅ Usuario unido a sala:', { 
+      console.log('Usuario unido a sala:', { 
         userId: result.user.id, 
         nickname: result.user.nickname,
         roomName: result.room.name 
@@ -56,14 +64,14 @@ class UserController {
         }
       });
     } catch (error) {
-      console.error('❌ Error al unirse a sala:', error.message);
+      console.error('Error al unirse a sala:', error.message);
 
       // Manejo de errores específicos
       const statusCode = error.status || 500;
       const errorMessages = {
         404: 'Sala no encontrada con ese PIN',
-        409: 'Nickname ya en uso o ya tienes una conexión activa',
-        410: 'La sala ha expirado',
+        409: 'Nickname ya en uso en esta sala',
+        410: 'La sala ha expirado o está desactivada',
         429: 'La sala está llena'
       };
 
@@ -91,7 +99,7 @@ class UserController {
 
       const result = await userService.leaveRoom(userId);
 
-      console.log('✅ Usuario salió de sala:', { userId, roomId: result.roomId });
+      console.log('Usuario salió de sala:', { userId, roomId: result.roomId });
 
       res.json({
         success: true,
@@ -99,7 +107,7 @@ class UserController {
         data: result
       });
     } catch (error) {
-      console.error('❌ Error al salir de sala:', error.message);
+      console.error('Error al salir de sala:', error.message);
 
       const statusCode = error.status || 500;
       res.status(statusCode).json({
@@ -181,16 +189,14 @@ class UserController {
     try {
       const { roomId } = req.params;
       const userId = req.user?.id;
+      const userRoomId = req.user?.currentRoomId;
 
-      // Validar que el usuario tiene acceso a esta sala
-      if (userId) {
-        const hasAccess = await userService.hasRoomAccess(userId, roomId);
-        if (!hasAccess) {
-          return res.status(403).json({
-            success: false,
-            message: 'No tienes acceso a esta sala'
-          });
-        }
+      // Validar que el usuario esté en la misma sala
+      if (!userRoomId || userRoomId !== roomId) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes acceso a esta sala. Debes estar conectado a la sala para ver sus participantes.'
+        });
       }
 
       const participants = await userService.getRoomParticipants(roomId);
@@ -242,7 +248,7 @@ class UserController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('❌ Error al validar sesión:', error.message);
+      console.error('Error al validar sesión:', error.message);
 
       const statusCode = error.status || 500;
       res.status(statusCode).json({
@@ -270,14 +276,14 @@ class UserController {
       // Salir de la sala y desconectar
       await userService.leaveRoom(userId);
 
-      console.log('✅ Usuario desconectado:', userId);
+      console.log('Usuario desconectado:', userId);
 
       res.json({
         success: true,
         message: 'Desconectado exitosamente'
       });
     } catch (error) {
-      console.error('❌ Error al desconectar:', error.message);
+      console.error('Error al desconectar:', error.message);
 
       res.status(500).json({
         success: false,
@@ -288,7 +294,7 @@ class UserController {
   }
 
   /**
-   * GET /api/users/rooms/available - Verificar si un PIN es válido (sin unirse)
+   * GET /api/users/rooms/check - Verificar si un PIN es válido (sin unirse)
    */
   async checkPin(req, res) {
     try {
@@ -301,23 +307,150 @@ class UserController {
         });
       }
 
-      // Nota: Necesitarías agregar este método en roomService o userService
-      // Por ahora retornamos estructura básica
-      
+      //Validar formato de PIN
+      if (!/^\d{6}$/.test(pin)) {
+        return res.status(400).json({
+          success: false,
+          message: 'PIN debe ser un número de 6 dígitos'
+        });
+      }
+
+      //Usar roomService para verificar PIN
+      try {
+        const room = await roomService.getRoomByPin(pin);
+        
+        res.json({
+          success: true,
+          message: 'PIN válido',
+          data: {
+            pinExists: true,
+            roomName: room.name,
+            roomDescription: room.description,
+            maxParticipants: room.maxParticipants,
+            currentParticipants: room.stats?.onlineCount || 0,
+            roomType: room.type,
+            isActive: room.isActive
+          }
+        });
+      } catch (error) {
+        // Si el servicio arroja error 404, el PIN no existe
+        if (error.status === 404) {
+          return res.status(404).json({
+            success: false,
+            message: 'PIN no válido o sala no encontrada'
+          });
+        }
+        
+        // Si es 410, sala expirada/desactivada
+        if (error.status === 410) {
+          return res.status(410).json({
+            success: false,
+            message: 'La sala ha expirado o está desactivada'
+          });
+        }
+        
+        // Si es 429, sala llena
+        if (error.status === 429) {
+          return res.status(429).json({
+            success: false,
+            message: 'La sala está llena'
+          });
+        }
+        
+        throw error; // Re-lanzar otros errores
+      }
+    } catch (error) {
+      console.error('Error al verificar PIN:', error.message);
+
+      res.status(500).json({
+        success: false,
+        message: 'Error al verificar PIN',
+        error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
+  }
+
+  /**
+   * GET /api/users/stats - Estadísticas del usuario actual
+   */
+  async getUserStats(req, res) {
+    try {
+      const userId = req.user?.id;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Usuario no autenticado'
+        });
+      }
+
+      // Obtener estadísticas del usuario (necesitarías implementar esto en userService)
+      const stats = await userService.getUserStats(userId);
+
       res.json({
         success: true,
-        message: 'PIN válido',
+        data: stats,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('❌ Error al obtener estadísticas:', error.message);
+
+      res.status(500).json({
+        success: false,
+        message: 'Error al obtener estadísticas del usuario',
+        error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
+  }
+
+  /**
+   * PUT /api/users/nickname - Cambiar nickname
+   */
+  async changeNickname(req, res) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Datos inválidos',
+          errors: errors.array()
+        });
+      }
+
+      const userId = req.user?.id;
+      const { nickname } = req.body;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Usuario no autenticado'
+        });
+      }
+
+      if (!nickname || nickname.trim().length < 2) {
+        return res.status(400).json({
+          success: false,
+          message: 'Nickname debe tener al menos 2 caracteres'
+        });
+      }
+
+      const updatedUser = await userService.changeNickname(userId, nickname.trim());
+
+      res.json({
+        success: true,
+        message: 'Nickname actualizado exitosamente',
         data: {
-          pinExists: true,
-          roomName: 'Sala encontrada' // Placeholder
+          user: updatedUser
         }
       });
     } catch (error) {
-      console.error('❌ Error al verificar PIN:', error.message);
+      console.error('Error al cambiar nickname:', error.message);
 
-      res.status(404).json({
+      const statusCode = error.status || 500;
+      res.status(statusCode).json({
         success: false,
-        message: 'PIN no válido o sala no encontrada'
+        message: error.message || 'Error al cambiar nickname',
+        error: process.env.NODE_ENV === 'development' ? error.stack : undefined
       });
     }
   }

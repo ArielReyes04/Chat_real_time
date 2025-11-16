@@ -41,7 +41,7 @@ class UserRepository {
         ]
       });
     } catch (error) {
-      console.error('❌ Error en UserRepository.findBySessionId:', error.message);
+      console.error('Error en UserRepository.findBySessionId:', error.message);
       throw error;
     }
   }
@@ -55,7 +55,7 @@ class UserRepository {
         }
       });
     } catch (error) {
-      console.error('❌ Error en UserRepository.findByIpAndRoom:', error.message);
+      console.error('Error en UserRepository.findByIpAndRoom:', error.message);
       throw error;
     }
   }
@@ -69,30 +69,60 @@ class UserRepository {
         }
       });
     } catch (error) {
-      console.error('❌ Error en UserRepository.findByNicknameAndRoom:', error.message);
+      console.error('Error en UserRepository.findByNicknameAndRoom:', error.message);
       throw error;
     }
   }
 
   async findByRoom(roomId, options = {}) {
-    try {
-      const { onlineOnly = false, limit = 100 } = options;
-      
-      const whereCondition = { currentRoomId: roomId };
-      if (onlineOnly) {
-        whereCondition.isOnline = true;
-      }
+  try {
+    const {
+      onlineOnly = false,
+      includeOffline = true,
+      limit = 100,
+      offset = 0
+    } = options;
 
-      return await User.findAll({
-        where: whereCondition,
-        order: [['joinedAt', 'ASC']],
-        limit
-      });
-    } catch (error) {
-      console.error('❌ Error en UserRepository.findByRoom:', error.message);
-      throw error;
+    const whereClause = {
+      currentRoomId: roomId
+    };
+
+    if (onlineOnly) {
+      whereClause.isOnline = true;
     }
+
+    if (!includeOffline) {
+      whereClause.isOnline = true;
+    }
+
+    console.log('Buscando usuarios en sala:', { roomId, whereClause, options });
+
+    const users = await User.findAll({
+      where: whereClause,
+      include: [
+        {
+          model: Room,
+          as: 'currentRoom',
+          attributes: ['id', 'name', 'pin']
+        }
+      ],
+      limit,
+      offset,
+      order: [['joinedAt', 'DESC']],
+      attributes: [
+        'id', 'nickname', 'isOnline', 'joinedAt', 
+        'lastActivity', 'currentRoomId'
+      ]
+    });
+
+    console.log(`Encontrados ${users.length} usuarios en sala ${roomId}`);
+
+    return users;
+  } catch (error) {
+    console.error('Error en UserRepository.findByRoom:', error.message);
+    throw error;
   }
+}
 
   async findAll(options = {}) {
     try {
@@ -127,17 +157,36 @@ class UserRepository {
   }
 
   async update(id, userData) {
-    try {
-      const user = await User.findByPk(id);
-      if (!user) {
-        throw new Error('Usuario no encontrado');
-      }
-      return await user.update(userData);
-    } catch (error) {
-      console.error('❌ Error en UserRepository.update:', error.message);
-      throw error;
+  try {
+    console.log('🔄 Actualizando usuario:', { id, userData });
+
+    const [affectedRows] = await User.update(userData, {
+      where: { id },
+      returning: true // ✅ Para PostgreSQL
+    });
+
+    if (affectedRows === 0) {
+      const err = new Error('Usuario no encontrado para actualizar');
+      err.status = 404;
+      throw err;
     }
+
+    
+    const updatedUser = await this.findById(id);
+    
+    console.log('✅ Usuario actualizado exitosamente:', {
+      id: updatedUser.id,
+      nickname: updatedUser.nickname,
+      currentRoomId: updatedUser.currentRoomId,
+      isOnline: updatedUser.isOnline
+    });
+
+    return updatedUser;
+  } catch (error) {
+    console.error('❌ Error en UserRepository.update:', error.message);
+    throw error;
   }
+}
 
   async updateActivity(id) {
     try {

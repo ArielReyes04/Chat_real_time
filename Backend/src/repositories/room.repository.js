@@ -12,26 +12,36 @@ class RoomRepository {
   }
 
   async findById(id) {
-    try {
-      return await Room.findByPk(id, {
-        include: [
-          {
-            model: Admin,
-            as: 'creator',
-            attributes: ['id', 'username', 'email']
-          },
-          {
-            model: User,
-            as: 'participants',
-            attributes: ['id', 'nickname', 'isOnline', 'joinedAt']
-          }
-        ]
-      });
-    } catch (error) {
-      console.error('❌ Error en RoomRepository.findById:', error.message);
-      throw error;
+  try {
+    console.log('🔍 Buscando sala por ID:', id);
+    
+    const room = await Room.findByPk(id, {
+      include: [
+        {
+          model: Admin,
+          as: 'creator',  // ✅ VERIFICAR que el alias coincida
+          attributes: ['id', 'username', 'email']
+        }
+      ]
+    });
+
+    if (!room) {
+      console.log('❌ Sala no encontrada en BD:', id);
+      return null;
     }
+
+    console.log('✅ Sala encontrada:', { 
+      id: room.id, 
+      name: room.name,
+      createdBy: room.createdBy
+    });
+    
+    return room;
+  } catch (error) {
+    console.error('❌ Error en RoomRepository.findById:', error.message);
+    throw error;
   }
+}
 
   async findByPin(pin) {
     try {
@@ -193,27 +203,35 @@ class RoomRepository {
 
   async getRoomStats(roomId) {
     try {
-      const [participantCount, messageCount, room] = await Promise.all([
-        User.count({
-          where: { currentRoomId: roomId }
-        }),
-        Message.count({
-          where: { roomId }
-        }),
-        Room.findByPk(roomId)
-      ]);
-
+      const participantCount = await User.count({
+        where: { 
+          currentRoomId: roomId 
+        }
+      });
+  
+      const onlineCount = await User.count({
+        where: { 
+          currentRoomId: roomId,
+          isOnline: true 
+        }
+      });
+  
+      const messageCount = await Message.count({
+        where: { roomId }
+      });
+  
+      console.log(`Stats de sala ${roomId}:`, {
+        participantCount,
+        onlineCount,
+        messageCount
+      });
+  
       return {
         participantCount,
+        onlineCount,
         messageCount,
-        onlineCount: await User.count({
-          where: { 
-            currentRoomId: roomId,
-            isOnline: true 
-          }
-        }),
-        createdAt: room?.createdAt,
-        isActive: room?.isActive
+        createdAt: new Date(),
+        isActive: true
       };
     } catch (error) {
       console.error('❌ Error en RoomRepository.getRoomStats:', error.message);
