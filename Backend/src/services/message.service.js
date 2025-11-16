@@ -1,6 +1,5 @@
-const messageRepo = require('../repositories/message.repository');
-const userRepo = require('../repositories/user.repository');
-const roomRepo = require('../repositories/room.repository');
+const messageRepository = require('../repositories/message.repository');
+const roomRepository = require('../repositories/room.repository');
 
 class MessageService {
   /**
@@ -311,6 +310,22 @@ class MessageService {
       console.error('❌ Error en MessageService.getRoomMessageStats:', error.message);
       throw error;
     }
+  }
+
+  /**
+   * Crear sala
+   */
+  async createRoom({ name, room_type, admin_id }) {
+    // Generar PIN de 6 dígitos (cumple con len: [4, 10])
+    const pin = Math.floor(100000 + Math.random() * 900000).toString(); // 6 dígitos
+    
+    return await roomRepository.create({
+      name,
+      room_type,
+      admin_id,
+      pin,
+      createdBy: admin_id
+    });
   }
 }
 

@@ -1,0 +1,92 @@
+.message-input-container {
+  padding: var(--spacing-lg);
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-primary);
+}
+
+.message-input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--spacing-md);
+  background-color: var(--bg-tertiary);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-primary);
+  transition: border-color var(--transition-fast);
+}
+
+.message-input-wrapper:focus-within {
+  border-color: var(--blue-500);
+}
+
+.message-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  resize: none;
+  max-height: 120px;
+  overflow-y: auto;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.message-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.message-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-send {
+  background: var(--blue-600);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.btn-send:hover:not(:disabled) {
+  background: var(--blue-700);
+  transform: scale(1.05);
+}
+
+.btn-send.active {
+  background: linear-gradient(135deg, var(--blue-600), var(--blue-500));
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--bg-hover);
+}
+
+.btn-send svg {
+  transition: transform var(--transition-fast);
+}
+
+.btn-send:hover:not(:disabled) svg {
+  transform: translateX(2px);
+}
+
+@media (max-width: 768px) {
+  .message-input-container {
+    padding: var(--spacing-md);
+  }
+
+  .message-input-wrapper {
+    padding: var(--spacing-sm) var(--spacing-md);
+  }
+}

@@ -1,91 +1,158 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { register } from '../services/auth'
+import { useState, FormEvent } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuthContext } from '../context/AuthContext';
+import { validateEmail, validatePassword, validateUsername } from '../utils/validators';
+import './Auth.css';
 
-export default function Register() {
-  const [username, setUsername] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
+export const Register = () => {
+  const navigate = useNavigate();
+  const { register, isLoading } = useAuthContext();
+  const [formData, setFormData] = useState({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    first_name: '',
+    last_name: '',
+  });
+  const [error, setError] = useState('');
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    const usernameValidation = validateUsername(formData.username);
+    if (!usernameValidation.valid) {
+      setError(usernameValidation.message!);
+      return;
+    }
+
+    if (!validateEmail(formData.email)) {
+      setError('Por favor ingresa un email válido');
+      return;
+    }
+
+    const passwordValidation = validatePassword(formData.password);
+    if (!passwordValidation.valid) {
+      setError(passwordValidation.message!);
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Las contraseñas no coinciden');
+      return;
+    }
 
     try {
-      // Llamar a register con parámetros individuales, no objeto
-      const response = await register(username, email, password)
-      
-      if (response.success && response.data) {
-        console.log('✅ Registro exitoso:', response.data.user)
-        // El token ya se guarda en auth.ts
-        navigate('/chat')
-      } else {
-        setError(response.message || 'Error al registrar usuario')
-      }
+      const { confirmPassword, ...registerData } = formData;
+      await register(registerData);
+      navigate('/chat');
     } catch (err: any) {
-      console.error('❌ Error en registro:', err)
-      setError(err.message || 'Error al registrar usuario')
-    } finally {
-      setLoading(false)
+      setError(err.message || 'Error al registrarse');
     }
-  }
+  };
 
   return (
-    <div className="auth-page card">
-      <h2 className="title">Crear cuenta</h2>
-      <p className="subtitle">Únete al chat global</p>
-
-      <form onSubmit={handleSubmit} className="auth-form">
-        <label>
-          Nombre de usuario *
-          <input 
-            value={username} 
-            onChange={(e) => setUsername(e.target.value)} 
-            required 
-            placeholder="usuario123"
-            autoComplete="username"
-          />
-        </label>
-
-        <label>
-          Email *
-          <input 
-            value={email} 
-            onChange={(e) => setEmail(e.target.value)} 
-            type="email" 
-            required 
-            placeholder="correo@ejemplo.com"
-            autoComplete="email"
-          />
-        </label>
-
-        <label>
-          Contraseña *
-          <input 
-            value={password} 
-            onChange={(e) => setPassword(e.target.value)} 
-            type="password" 
-            required 
-            minLength={6}
-            placeholder="Mínimo 6 caracteres"
-            autoComplete="new-password"
-          />
-        </label>
-
-        <button className="primary" type="submit" disabled={loading}>
-          {loading ? 'Creando cuenta...' : 'Crear cuenta'}
-        </button>
-
-        <div className="helper">
-          ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>
+    <div className="auth-container">
+      <div className="auth-card">
+        <div className="auth-header">
+          <h1>✨ Crear Cuenta</h1>
+          <p>Únete a nuestra comunidad</p>
         </div>
 
-        {error && <p className="error">{error}</p>}
-      </form>
+        <form onSubmit={handleSubmit} className="auth-form">
+          {error && <div className="error-message">{error}</div>}
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="first_name">Nombre</label>
+              <input
+                type="text"
+                id="first_name"
+                value={formData.first_name}
+                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                placeholder="Juan"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="last_name">Apellido</label>
+              <input
+                type="text"
+                id="last_name"
+                value={formData.last_name}
+                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                placeholder="Pérez"
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="username">Nombre de usuario</label>
+            <input
+              type="text"
+              id="username"
+              value={formData.username}
+              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              placeholder="juanperez"
+              required
+              autoComplete="username"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="tu@email.com"
+              required
+              autoComplete="email"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password">Contraseña</label>
+            <input
+              type="password"
+              id="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              placeholder="••••••••"
+              required
+              autoComplete="new-password"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="confirmPassword">Confirmar Contraseña</label>
+            <input
+              type="password"
+              id="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+              placeholder="••••••••"
+              required
+              autoComplete="new-password"
+            />
+          </div>
+
+          <button type="submit" className="btn-submit" disabled={isLoading}>
+            {isLoading ? 'Registrando...' : 'Registrarse'}
+          </button>
+        </form>
+
+        <div className="auth-footer">
+          <p>
+            ¿Ya tienes cuenta?{' '}
+            <Link to="/login" className="auth-link">
+              Inicia sesión aquí
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
-  )
-}
+  );
+};

@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const messageController = require('../controllers/message.controller'); // ✅ IMPORTAR CONTROLADOR CORRECTO
+const messageController = require('../controllers/message.controller');
 const { requireUserAuth } = require('../middlewares/user.middleware');
+const { requireAuth } = require('../middlewares/auth.middleware');
 const { body, query, param } = require('express-validator');
 const multer = require('multer');
 const path = require('path');
@@ -102,21 +103,11 @@ const getFilesValidation = [
     .withMessage('ID de sala debe ser un UUID válido')
 ];
 
-// RUTAS
-
-// GET /api/messages - Obtener mensajes de una sala
+// RUTAS EXISTENTES (usuarios)
 router.get('/', requireUserAuth, getMessagesValidation, messageController.getMessages);
-
-// GET /api/messages/search - Buscar mensajes (ANTES que /:id)
 router.get('/search', requireUserAuth, searchValidation, messageController.searchMessages);
-
-// GET /api/messages/files - Obtener archivos de una sala (ANTES que /:id)
 router.get('/files', requireUserAuth, getFilesValidation, messageController.getRoomFiles);
-
-// POST /api/messages - Enviar mensaje de texto
 router.post('/', requireUserAuth, postMessageValidation, messageController.postMessage);
-
-// POST /api/messages/file - Enviar archivo
 router.post('/file', 
   requireUserAuth,
   upload.single('file'),
@@ -138,8 +129,40 @@ router.post('/file',
   },
   messageController.postMessage
 );
-
-// DELETE /api/messages/:id - Eliminar mensaje
 router.delete('/:id', requireUserAuth, deleteMessageValidation, messageController.deleteMessage);
+
+// === RUTAS PARA ADMIN (nuevas) ===
+// Listar salas del admin (usa token admin)
+router.get('/rooms', requireAuth, messageController.getRoomsForAdmin);
+
+// Crear sala
+router.post(
+  '/rooms',
+  requireAuth,
+  [
+    body('name').notEmpty().withMessage('Nombre requerido'),
+    body('room_type').isIn(['private', 'group']).withMessage('Tipo inválido')
+  ],
+  messageController.createRoom
+);
+
+// Obtener mensajes por sala (ID numérico)
+router.get(
+  '/room/:roomId',
+  requireAuth,
+  [param('roomId').isInt({ min: 1 }).withMessage('roomId debe ser numérico')],
+  messageController.getMessagesForAdmin
+);
+
+// Enviar mensaje (admin)
+router.post(
+  '/send',
+  requireAuth,
+  [
+    body('room_id').isInt({ min: 1 }).withMessage('room_id requerido'),
+    body('content').isString().isLength({ min: 1, max: 2000 }).withMessage('Contenido inválido')
+  ],
+  messageController.sendMessageForAdmin
+);
 
 module.exports = router;

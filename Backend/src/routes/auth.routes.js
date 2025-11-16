@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
+const messageController = require('../controllers/message.controller');
 const { requireAuth } = require('../middlewares/auth.middleware');
 const { body } = require('express-validator');
 
@@ -66,5 +67,11 @@ router.get('/admins/active', requireAuth, authController.getActiveAdmins);
 router.put('/admins/:adminId/activate', requireAuth, authController.activateAdmin);
 router.put('/admins/:adminId/deactivate', requireAuth, authController.deactivateAdmin);
 
+// RUTAS
+// GET /api/messages/rooms - Obtener salas del admin
+router.get('/rooms', requireAuth, messageController.getRoomsForAdmin);
+
+// POST /api/messages/rooms - Crear sala (ya existe)
+router.post('/rooms', requireAuth, messageController.createRoom);
 
 module.exports = router;

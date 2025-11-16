@@ -1,77 +1,91 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { login } from '../services/auth'
+import { useState, FormEvent } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuthContext } from '../context/AuthContext';
+import { validateEmail } from '../utils/validators';
+import './Auth.css';
 
-export default function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
+export const Login = () => {
+  const navigate = useNavigate();
+  const { login, isLoading } = useAuthContext();
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+  const [error, setError] = useState('');
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!validateEmail(formData.email)) {
+      setError('Por favor ingresa un email válido');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
 
     try {
-      // ✅ CORRECTO: Pasar parámetros individuales, no objeto
-      const response = await login(email, password)
-      
-      if (response.success && response.data) {
-        console.log('✅ Login exitoso:', response.data.user)
-        // El token ya se guarda en auth.ts
-        navigate('/chat')
-        console.log('✅ Navigate ejecutado')
-      } else {
-        setError(response.message || 'Error al iniciar sesión')
-      }
+      await login(formData);
+      navigate('/chat');
     } catch (err: any) {
-      console.error('❌ Error en login:', err)
-      setError(err.message || 'Error al iniciar sesión')
-    } finally {
-      setLoading(false)
+      setError(err.message || 'Error al iniciar sesión');
     }
-  }
+  };
 
   return (
-    <div className="auth-page card">
-      <h2 className="title">Bienvenido</h2>
-      <p className="subtitle">Inicia sesión para entrar al chat</p>
-
-      <form onSubmit={handleSubmit} className="auth-form">
-        <label>
-          Email
-          <input 
-            value={email} 
-            onChange={(e) => setEmail(e.target.value)} 
-            type="email" 
-            required 
-            placeholder="correo@ejemplo.com"
-            autoComplete="email"
-          />
-        </label>
-        <label>
-          Password
-          <input 
-            value={password} 
-            onChange={(e) => setPassword(e.target.value)} 
-            type="password" 
-            required 
-            placeholder="Tu contraseña"
-            autoComplete="current-password"
-          />
-        </label>
-        <button className="primary" type="submit" disabled={loading}>
-          {loading ? 'Iniciando sesión...' : 'Entrar'}
-        </button>
-
-        <div className="helper">
-          ¿No tienes cuenta? <Link to="/register">Regístrate</Link>
+    <div className="auth-container">
+      <div className="auth-card">
+        <div className="auth-header">
+          <h1>💬 Bienvenido</h1>
+          <p>Inicia sesión para continuar</p>
         </div>
 
-        {error && <p className="error">{error}</p>}
-      </form>
+        <form onSubmit={handleSubmit} className="auth-form">
+          {error && <div className="error-message">{error}</div>}
+
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="tu@email.com"
+              required
+              autoComplete="email"
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password">Contraseña</label>
+            <input
+              type="password"
+              id="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              placeholder="••••••••"
+              required
+              autoComplete="current-password"
+            />
+          </div>
+
+          <button type="submit" className="btn-submit" disabled={isLoading}>
+            {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+          </button>
+        </form>
+
+        <div className="auth-footer">
+          <p>
+            ¿No tienes cuenta?{' '}
+            <Link to="/register" className="auth-link">
+              Regístrate aquí
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
-  )
-}
+  );
+};

@@ -1,0 +1,142 @@
+.chat-window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--bg-primary);
+}
+
+.chat-window.loading,
+.chat-window.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-primary);
+}
+
+.chat-window.loading {
+  gap: var(--spacing-lg);
+  color: var(--text-secondary);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--bg-tertiary);
+  border-top-color: var(--blue-500);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: var(--spacing-2xl);
+}
+
+.empty-state h2 {
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+  font-size: 1.5rem;
+}
+
+.empty-state p {
+  color: var(--text-tertiary);
+  font-size: 0.95rem;
+}
+
+.chat-header {
+  padding: var(--spacing-lg);
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+}
+
+.chat-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.chat-title {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.chat-type {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  color: var(--blue-500);
+  font-size: 0.85rem;
+}
+
+.typing-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.typing-dots span {
+  width: 6px;
+  height: 6px;
+  background-color: var(--blue-500);
+  border-radius: 50%;
+  animation: typing 1.4s infinite;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  30% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+}
+
+.typing-text {
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .chat-header {
+    padding: var(--spacing-md);
+    min-height: 64px;
+  }
+
+  .chat-title {
+    font-size: 1.1rem;
+  }
+
+  .typing-indicator {
+    font-size: 0.75rem;
+  }
+}
