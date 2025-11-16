@@ -64,70 +64,78 @@ class MessageController {
    * Enviar mensaje a una sala
    */
   async postMessage(req, res) {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({
-          success: false,
-          message: 'Datos inválidos',
-          errors: errors.array()
-        });
-      }
-
-      const { content, roomId, type = 'text' } = req.body;
-      const senderId = req.user?.id; // Usuario anónimo desde middleware
-      const fileData = req.file ? {
-        fileName: req.file.filename,
-        originalName: req.file.originalname,
-        path: req.file.path,
-        size: req.file.size,
-        mimeType: req.file.mimetype
-      } : null;
-
-      const message = await messageService.sendMessage({
-        senderId,
-        content,
-        roomId,
-        type,
-        fileData
-      });
-
-      res.status(201).json({
-        success: true,
-        message: 'Mensaje enviado exitosamente',
-        data: message
-      });
-    } catch (error) {
-      console.error('❌ Error al enviar mensaje:', error.message);
-
-      if (error.status === 400) {
-        return res.status(400).json({
-          success: false,
-          message: error.message
-        });
-      }
-
-      if (error.status === 403) {
-        return res.status(403).json({
-          success: false,
-          message: error.message
-        });
-      }
-
-      if (error.status === 404) {
-        return res.status(404).json({
-          success: false,
-          message: error.message
-        });
-      }
-
-      res.status(500).json({
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
         success: false,
-        message: 'Error al enviar mensaje',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: 'Datos inválidos',
+        errors: errors.array()
       });
     }
+
+    const { content, roomId, type = 'text' } = req.body;
+    const senderId = req.user?.id;
+    
+    // ✅ MEJORAR: Validación de contenido para mensajes de texto
+    if (type === 'text' && (!content || content.trim().length === 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Contenido es requerido para mensajes de texto'
+      });
+    }
+
+    // ✅ MEJORAR: Validación de archivo para mensajes de archivo
+    if (type === 'file' && !req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Archivo es requerido para mensajes de tipo file'
+      });
+    }
+
+    const fileData = req.file ? {
+      fileName: req.file.filename,
+      originalName: req.file.originalname,
+      path: req.file.path.replace(/\\/g, '/'), // ✅ Normalizar path para Windows
+      size: req.file.size,
+      mimeType: req.file.mimetype
+    } : null;
+
+    // ✅ MEJORAR: Determinar tipo automáticamente si hay archivo
+    const messageType = req.file ? 'file' : 'text';
+
+    const message = await messageService.sendMessage({
+      senderId,
+      content: content?.trim() || (req.file ? req.file.originalname : ''),
+      roomId,
+      type: messageType,
+      fileData
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Mensaje enviado exitosamente',
+      data: message
+    });
+  } catch (error) {
+    console.error('❌ Error al enviar mensaje:', error.message);
+
+    // ✅ MEJORAR: Manejo de errores más específico
+    const statusCode = error.status || 500;
+    
+    let message = 'Error al enviar mensaje';
+    if (error.message.includes('sala no encontrada')) message = 'Sala no encontrada';
+    if (error.message.includes('sin permisos')) message = 'Sin permisos para enviar mensajes';
+    if (error.message.includes('archivo muy grande')) message = 'Archivo demasiado grande';
+    if (error.message.includes('tipo no permitido')) message = 'Tipo de archivo no permitido';
+
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || message,
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
+}
 
   /**
    * Eliminar mensaje (soft delete)

@@ -64,7 +64,7 @@ router.get('/verify-token', requireAuth, authController.verifyToken);
 
 router.get('/admins/active', requireAuth, authController.getActiveAdmins);
 router.put('/admins/:adminId/activate', requireAuth, authController.activateAdmin);
-router.put('/admins/:adminId/deactivate', requireAuth, authController.deactivateAdmin);
+router.put('/admins/:adminId/desactivate', requireAuth, authController.desactivateAdmin);
 
 
 module.exports = router;

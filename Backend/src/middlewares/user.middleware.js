@@ -15,6 +15,7 @@ async function requireUserAuth(req, res, next) {
     const user = await userRepo.findBySessionId(sessionId);
     
     if (!user) {
+      console.log('❌ Usuario no encontrado para sessionId:', sessionId);
       return res.status(401).json({
         success: false,
         message: 'Sesión no válida'

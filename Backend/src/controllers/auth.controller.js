@@ -388,7 +388,7 @@ async activateAdmin(req, res) {
 /**
  * Desactivar administrador (solo para super admin)
  */
-async deactivateAdmin(req, res) {
+async desactivateAdmin(req, res) {
   try {
     const { adminId } = req.params;
     

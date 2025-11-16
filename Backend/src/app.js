@@ -44,6 +44,8 @@ app.get('/api/health', (req, res) => {
 // Rutas
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/messages', require('./routes/message.routes'));
+app.use('/api/users', require('./routes/user.routes'));
+app.use('/api/rooms', require('./routes/room.routes'));
 
 // Ruta para servir archivos con headers apropiados
 app.get('/api/files/:filename', (req, res) => {
