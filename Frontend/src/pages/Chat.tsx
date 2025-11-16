@@ -55,9 +55,18 @@ export default function Chat() {
     console.log('🔑 Token:', localStorage.getItem('token'))
     
     load()
+
+    // conectar socket
+    const socket: Socket = ioClient(import.meta.env.VITE_API_URL || 'http://localhost:3000')
+    socket.on('message', (m: Message) => {
+      setMessages((s) => [...s, m])
+      setTimeout(() => listRef.current?.scrollTo({ top: 999999, behavior: 'smooth' }), 50)
+    })
+
     pollRef.current = window.setInterval(load, 3000)
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
+      socket.disconnect()
     }
   }, [])
 
